@@ -1,4 +1,7 @@
 # Graphepp
+Project created by: - **Ayoub El Hatri** <a href="https://github.com/Ayoub50">Link to his github</a>
+                    - **Yahya Atouf** <a href="https://github.com/ZTOUF/Graphepp">Owner of this repository</a>
+
 A student project from Polytech Tours: A powerful C++ graph library built with OOP principles. Supports directed/undirected graphs, generics, file import/export, graph inversion, and connected components calculation via an optimized algorithm.
 
 
