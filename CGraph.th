@@ -1,0 +1,43 @@
+﻿#include "CGraph.h"
+#include "CGraphOrient.h"
+
+
+/*********************************************************************************************************************************
+* GROAjouterArc2(uiIdDep, uiIdArr)
+* ****************
+* Entr�e : uiIdDep (unsigned int), uiIdArr (unsigned int)
+* N�cessite : Sommets correspondants existants
+* Sortie : Aucune
+* Entra�ne : Ajoute deux arcs (aller et retour) pour mod�liser un arc non orient�
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraph<TArc, TSommet>::GROAjouterArc2(unsigned int uiIdDep, unsigned int uiIdArr){
+    CGraphOrient<TArc, TSommet>::GROAjouterArc2(uiIdDep, uiIdArr);
+    CGraphOrient<TArc, TSommet>::GROAjouterArc2(uiIdArr, uiIdDep);
+
+}
+/*********************************************************************************************************************************
+* GROSupprimerArc(uiSomDep, uiSomArr)
+* ****************
+* Entr�e : uiSomDep, uiSomArr (unsigned int)
+* N�cessite : L�arc doit exister dans les deux sens
+* Sortie : Aucune
+* Entra�ne : Supprime les deux arcs correspondant � un arc non orient�
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraph<TArc, TSommet>::GROSupprimerArc(unsigned int uiSomDep, unsigned int uiSomArr){
+    CGraphOrient<TArc, TSommet>::GROSupprimerArc(uiSomDep, uiSomArr);
+    CGraphOrient<TArc, TSommet>::GROSupprimerArc(uiSomArr, uiSomDep);
+}
+/*********************************************************************************************************************************
+* GROModifierArc(uiSomDep, uiSomArr, uiNewDep, uiNewArr)
+* ****************
+* Entr�e : uiSomDep, uiSomArr, uiNewDep, uiNewArr (unsigned int)
+* N�cessite : L�arc � modifier doit exister
+* Sortie : Aucune
+* Entra�ne : Modifie les deux arcs d�un arc non orient�
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraph<TArc, TSommet>::GROModifierArc(unsigned int uiSomDep, unsigned int uiSomArr, unsigned int uiNewDep, unsigned int uiNewArr) {
+    CGraphOrient<TArc, TSommet>::GROModifierArc(uiSomDep,uiSomArr, uiNewDep, uiNewArr);
+}

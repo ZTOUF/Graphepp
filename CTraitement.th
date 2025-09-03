@@ -1,0 +1,71 @@
+﻿#include "CGraphOrient.h"
+#include "CTraitement.h"
+
+/*********************************************************************************************************************************
+ * TRTInverserGraph
+ * ****************
+ * Entr�e : GROParam de type CGraphOrient<TArc, TSommet>
+ * Necessite :Rien
+ * Sortie : Aucune
+ * Entra�ne : inverser le graphe orient GROParam
+ * *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+CGraphOrient<TArc, TSommet> CTraitement::TRTInverserGraph(CGraphOrient<TArc, TSommet> GROParam) {
+    CGraphOrient<TArc, TSommet> GROgraphInverse;
+    GROgraphInverse = GROParam ;
+    vector<pair<unsigned int , unsigned int>> vArcs = GROParam.GROGetArcs();
+    for(auto arc : vArcs){
+        GROgraphInverse.GROSupprimerArc(arc.first, arc.second);
+
+    }
+    for(auto arc : vArcs){
+        GROgraphInverse.GROAjouterArc2(arc.second, arc.first);
+    }
+    return GROgraphInverse;
+}
+/*******************************************
+ * TRTNbComposantsConnexes
+ * ******
+ * Entrée : GROParam de type CGraph<TArc, TSommet>
+ * Necessite : Rien
+ * Sortie : unsigned int (Naturel)
+ * Entraine : Retourne le nombre des composants coneexes d'un graph non orient
+ * *******************************************/
+template<class TArc, class TSommet>
+unsigned int CTraitement::TRTNbComposantsConnexes(CGraph<TArc, TSommet> GROParam) {
+    unsigned int uiNbConnexe=0;
+    vector<unsigned int> vuiSommet;
+    for (unsigned int uiSommet: GROParam.GROGetSommet()) {
+        if (find(vuiSommet.begin(),vuiSommet.end(),uiSommet)==vuiSommet.end()){
+            uiNbConnexe++;
+            vector<unsigned int> vuitodo1;
+            for(unsigned int& uiSommet2: GROParam.GROGetSommet()){
+                if(find(vuiSommet.begin(),vuiSommet.end(),uiSommet2)==vuiSommet.end()){
+                    vuitodo1.push_back(uiSommet2);
+                    break;
+                }
+            }
+            while(!vuitodo1.empty()){
+                vuiSommet.push_back(vuitodo1[vuitodo1.size()-1]);
+                vuitodo1.pop_back();
+                vector<unsigned int> vuiSomme;
+                vuiSomme.clear();
+                for(auto pSommet: vuiSommet){
+                    vuiSomme.push_back(pSommet);
+                }
+                for(auto pSommet: vuitodo1){
+                    vuiSomme.push_back(pSommet);
+                }
+                for(auto& uiArc: GROParam.GROGetArcs()){
+                    if(uiArc.first==vuiSommet[vuiSommet.size()-1]){
+                        if(find(vuiSomme.begin(),vuiSomme.end(),uiArc.second)==vuiSomme.end()){
+                            vuitodo1.push_back(uiArc.second);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return uiNbConnexe;
+};
+

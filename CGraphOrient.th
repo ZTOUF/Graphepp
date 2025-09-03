@@ -1,0 +1,502 @@
+﻿#include <iostream>
+#include "CGraphOrient.h"
+#include "CSommet.h"
+#include "CArc.h"
+#include "CException.h"
+#include <unordered_map>
+#include <string>
+#define EXCArcRee 100
+#define EXCSommetInexistant 300
+#define EXCArcExisteDeja 400
+#define EXCArcInexistant 700
+#define EXCSommetDoublant 5
+#define EXCGraphDoublant 500
+
+using namespace std;
+
+//il faut gerer l'exception de l'allocation de l'arc et de sommet
+/*********************************************************************************************************************************
+* CGraphOrient(  Constructeur de recopie )
+* ****************
+* Entr�e : CGROParam (const r�f�rence vers un graphe existant)
+* N�cessite : Aucune
+* Sortie : Aucune
+* Entra�ne : Copie le contenu d�un graphe dans le nouveau graphe
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+CGraphOrient<TArc, TSommet>::CGraphOrient(const CGraphOrient &CGROParam) {
+    for (auto [id, sommet] : CGROParam.pGROSommet) {
+        GROAjouterSommet(id);
+    }
+    for (auto arc : CGROParam.pGROArc) {
+        unsigned int idDep = arc->ARCLireSomDep();
+        unsigned int idArr = arc->ARCLireSomArr();
+
+        GROAjouterArc2(idDep, idArr);
+
+
+    }
+}
+/*********************************************************************************************************************************
+* ~CGraphOrient()
+* ****************
+* Entr�e : Aucune
+* N�cessite : Aucune
+* Sortie : Aucune
+* Entra�ne : Lib�re la m�moire (arcs et sommets)
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+CGraphOrient<TArc, TSommet>::~CGraphOrient(){
+    for(auto& [uiSommetId, pSommet] : pGROSommet){
+        delete pSommet;
+    }
+    for(auto& pArc : pGROArc){
+        delete pArc;
+    }
+}
+/*********************************************************************************************************************************
+ * GROGetSommet()
+ * ****************
+ * Entr�e : Aucune
+ * N�cessite : Aucune
+ * Sortie : vector<unsigned int>
+ * Entra�ne : Renvoie la liste des identifiants des sommets
+ * *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+vector<unsigned int> CGraphOrient<TArc, TSommet>::GROGetSommet() {
+    vector<unsigned int> vVar;
+    for(const auto& som : pGROSommet)
+        vVar.push_back(som.first);
+    return vVar;
+}
+/*********************************************************************************************************************************
+* GROGetArcs()
+* ****************
+* Entr�e : Aucune
+* N�cessite : Aucune
+* Sortie : vector<pair<unsigned int, unsigned int>>
+* Entra�ne : Renvoie la liste des arcs du graphe
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+vector<pair<unsigned int , unsigned int>> CGraphOrient<TArc, TSommet>::GROGetArcs() const {
+    vector<pair<unsigned int , unsigned int>> vArcs;
+    for( auto arcs : pGROArc){
+        vArcs.emplace_back(arcs->ARCLireSomDep(), arcs->ARCLireSomArr());
+    }
+    return vArcs;
+}
+/*********************************************************************************************************************************
+* operator=(CGROParam)
+* ****************
+* Entr�e : CGROParam (const r�f�rence vers un graphe existant)
+* N�cessite : Aucune
+* Sortie : CGraphOrient&
+* Entra�ne : Affecte un graphe � un autre
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+CGraphOrient<TArc, TSommet>& CGraphOrient<TArc, TSommet>::operator=(const CGraphOrient<TArc, TSommet>& CGROParam) {
+    if (this != &CGROParam) {
+        for (auto [id, sommet] : pGROSommet) delete sommet;
+        pGROSommet.clear();
+        for (auto arc : pGROArc) delete arc;
+        pGROArc.clear();
+
+        for (auto [id, sommet] : CGROParam.pGROSommet) {
+            GROAjouterSommet(id);
+        }
+
+        for (auto arc : CGROParam.pGROArc) {
+            unsigned int idDep = arc->ARCLireSomDep();
+            unsigned int idArr = arc->ARCLireSomArr();
+
+            GROAjouterArc2(idDep,idArr);
+
+        }
+    }
+    return *this;
+}
+/*********************************************************************************************************************************
+* GROAjouterArc(pArc)
+* ****************
+* Entr�e : pArc (r�f�rence vers un arc existant)
+* N�cessite : Aucune
+* Sortie : Aucune
+* Entra�ne : Ajoute un arc d�j� cr�� dans le graphe OU (Exception EXCArcRee)
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROAjouterArc(CArc &pArc) {
+    if ( pArc.ARCLireSomDep() == pArc.ARCLireSomArr() ) {
+        CException EXCexcep1;
+        EXCexcep1.EXCmodifierCode(EXCArcRee);
+        throw(EXCexcep1);
+    }
+    TSommet* pSommetDep = nullptr;
+    TSommet* pSommetArr = nullptr;
+    for(auto sommet : pGROSommet){
+        if(sommet->SOMLireSommet() == pArc.ARCLireSomDep() ) {
+            pSommetDep = sommet;
+        }
+        if ( sommet->SOMLireSommet() == pArc.ARCLireSomArr() ){
+            pSommetArr = sommet;
+        }
+    }
+    if(!pSommetDep || !pSommetArr){
+        CException EXCexcep2;
+        EXCexcep2.EXCmodifierCode(EXCSommetInexistant);
+        throw(EXCexcep2);
+    }
+    pGROArc.push_back(&pArc);
+    pSommetDep->SOMAjouterArcDep2(&pArc);
+    pSommetArr->SOMAjouterArcArr2(&pArc);
+}
+/*********************************************************************************************************************************
+* GROAjouterArc2(uiIdDep, uiIdArr)
+* ****************
+* Entr�e : uiIdDep (unsigned int), uiIdArr (unsigned int)
+* N�cessite : Rien
+* Sortie : Aucune
+* Entra�ne : Cr�e et ajoute un arc entre deux sommets OU( Exception EXCSommetInexistant , EXCArcRee, EXCArcExisteDeja)
+**********************************************************************************************************************************/
+//OUI
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROAjouterArc2(unsigned int uiIdDep, unsigned int uiIdArr){
+    if(!GROExisteSommet(uiIdDep) || !GROExisteSommet(uiIdArr)) {
+        CException EXCexcep3;
+        EXCexcep3.EXCmodifierCode(EXCSommetInexistant);
+        throw(EXCexcep3);
+    }
+
+    if(uiIdDep == uiIdArr) {
+        CException EXCexcep4;
+        EXCexcep4.EXCmodifierCode(EXCArcRee);
+        throw EXCexcep4;
+    }
+    if (GROVerifArcExist(uiIdDep, uiIdArr)) {
+        CException EXCexcep5;
+        EXCexcep5.EXCmodifierCode(EXCArcExisteDeja);
+        throw EXCexcep5;
+    }
+
+    TArc* newArc = GROCreerArc(uiIdDep, uiIdArr);
+    pGROArc.push_back(newArc);
+    pGROSommet[uiIdDep]->SOMAjouterArcDep2(newArc);
+    pGROSommet[uiIdArr]->SOMAjouterArcArr2(newArc);
+}
+/*********************************************************************************************************************************
+* GROModifierArc(uiSomDep, uiSomArr, uiNewDep, uiNewArr)
+* ****************
+* Entr�e : anciens et nouveaux identifiants des extr�mit�s
+* N�cessite : Rien
+* Sortie : Aucune
+* Entra�ne : Modifie un arc existant OU (Exception EXCArcInexistant, EXCSommetInexistant, EXCArcRee, EXCArcExisteDeja)
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROModifierArc(unsigned int uiSomDep, unsigned int uiSomArr, unsigned int uiNewDep, unsigned int uiNewArr) {
+    if (!GROVerifArcExist(uiSomDep, uiSomArr)) {
+        CException EXCexcep6;
+        EXCexcep6.EXCmodifierCode(EXCArcInexistant);
+        throw EXCexcep6;
+    }
+    else {
+        if (!GROExisteSommet(uiNewDep) || !GROExisteSommet(uiNewArr)) {
+            CException EXCexcep7;
+            EXCexcep7.EXCmodifierCode(EXCSommetInexistant);
+            throw EXCexcep7;
+        }
+        if (uiNewDep == uiNewArr) {
+            CException EXCexcep8;
+            EXCexcep8.EXCmodifierCode(EXCArcRee);
+            throw EXCexcep8;
+        }
+        if (GROVerifArcExist(uiNewDep, uiNewArr)) {
+            CException EXCexcep9;
+            EXCexcep9.EXCmodifierCode(EXCArcExisteDeja);
+            throw EXCexcep9;
+        }
+        if (uiSomDep==uiNewDep && uiSomArr==uiNewArr) {
+            return;
+        }
+        GROSupprimerArc(uiSomDep, uiSomArr);
+        GROAjouterArc2(uiNewDep, uiNewArr);
+
+
+    }
+}
+
+/*********************************************************************************************************************************
+* GROExisteSommet(uiIdSommet)
+* ****************
+* Entr�e : uiIdSommet (unsigned int)
+* N�cessite : Aucune
+* Sortie : bool
+* Entra�ne : V�rifie si un sommet est pr�sent dans le graphe
+**********************************************************************************************************************************/
+//OUI
+template<class TArc, class TSommet>
+bool CGraphOrient<TArc, TSommet>::GROExisteSommet(unsigned int uiIdSommet) {
+    return pGROSommet.find(uiIdSommet) != pGROSommet.end();
+}
+/**********************************************************************************************************************************
+* GROCreerArc(uiSomDep, uiSomArr)
+* ****************
+* Entr�e : uiSomDep (unsigned int), uiSomArr (unsigned int)
+* N�cessite : Rien
+* Sortie : TArc* (nouvel arc cr��)
+* Entra�ne : Cr�e dynamiquement un arc orient� entre deux sommets OU (Exception EXCSommetInexistant, EXCArcRee, EXCArcExisteDeja)
+* *********************************************************************************************************************************/
+//OUI, pSOMArcDep, pSOMArcArr
+template<class TArc, class TSommet>
+TArc* CGraphOrient<TArc, TSommet>::GROCreerArc(unsigned int uiSomDep, unsigned int uiSomArr){
+    if(!GROExisteSommet(uiSomDep) || !GROExisteSommet(uiSomArr) ) {
+        CException EXCexcep10;
+        EXCexcep10.EXCmodifierCode(EXCSommetInexistant);
+        throw EXCexcep10;
+    }
+    if(uiSomDep == uiSomArr) {
+        CException EXCexcep11;
+        EXCexcep11.EXCmodifierCode(EXCArcRee);
+        throw EXCexcep11;
+    }
+    if (GROVerifArcExist(uiSomDep, uiSomArr)) {
+        CException EXCexcep12;
+        EXCexcep12.EXCmodifierCode(EXCArcExisteDeja);
+        throw EXCexcep12;
+    }
+
+
+    return new TArc(uiSomDep, uiSomArr);
+}
+/*********************************************************************************************************************************
+* GROVerifArcExist(uiSomDep, uiSomArr)
+* ****************
+* Entr�e : uiSomDep, uiSomArr (unsigned int)
+* N�cessite : Aucune
+* Sortie : bool
+* Entra�ne : V�rifie si un arc existe entre deux sommets
+* *********************************************************************************************************************************/
+//OUI
+template<class TArc, class TSommet>
+bool CGraphOrient<TArc, TSommet>::GROVerifArcExist(unsigned int uiSomDep, unsigned int uiSomArr){
+    for(CArc* pArc : pGROArc){
+        if(pArc->ARCLireSomDep() == uiSomDep && pArc->ARCLireSomArr() == uiSomArr)
+            return true;
+    }
+    return false;
+}
+/*********************************************************************************************************************************
+* GROAjouterSommet(uiSomID)
+* ****************
+* Entr�e : uiSomID (unsigned int)
+* N�cessite : Rien
+* Sortie : Aucune
+* Entra�ne : Ajoute un nouveau sommet dans le graphe OU (Exception EXCSommetDoublant)
+**********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc,TSommet>::GROAjouterSommet(unsigned int uiSomID){
+        if(GROExisteSommet(uiSomID)){
+            CException EXCobjet01;
+            EXCobjet01.EXCmodifierCode(EXCSommetDoublant);
+            throw(EXCobjet01);
+        }
+        else{
+            pGROSommet[uiSomID]= new TSommet(uiSomID);}
+}
+/*********************************************************************************************************************************
+* GROModifSommet(uiSomID, uiNouvID)
+* ****************
+* Entr�e : uiSomID, uiNouvID (unsigned int)
+* N�cessite : Rien
+* Sortie : Aucune
+* Entra�ne : Change l�identifiant d�un sommet OU (Exception EXCSommetDoublant, EXCSommetInexistant)
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc,TSommet>::GROModifSommet(unsigned int uiSomID, unsigned int uiNouvID){
+     if(pGROSommet.find(uiNouvID)!=pGROSommet.end()){
+            CException EXCobjet02;
+            EXCobjet02.EXCmodifierCode(EXCSommetDoublant);
+            throw(EXCobjet02);
+        }
+    if(pGROSommet.find(uiSomID)==pGROSommet.end()){
+        CException EXCobjet03;
+        EXCobjet03.EXCmodifierCode(EXCSommetInexistant);
+        throw(EXCobjet03);
+    }
+    else{
+            pGROSommet[uiNouvID]=pGROSommet.find(uiSomID)->second;
+            pGROSommet[uiNouvID]->SOMModifNum(uiNouvID);
+            pGROSommet.erase(uiSomID);
+            for(TArc* pArc : pGROArc){
+                if(pArc->ARCLireSomArr()==uiSomID)
+                    pArc->ARCModifSomArr(uiNouvID);
+
+                else if(pArc->ARCLireSomDep()==uiSomID)
+                    pArc->ARCModifSomDep(uiNouvID);
+            }
+        }
+    }
+/*********************************************************************************************************************************
+* GROSupprimmerSommet(uiSomID)
+* ****************
+* Entr�e : uiSomID (unsigned int)
+* N�cessite : Rien
+* Sortie : Aucune
+* Entra�ne : Supprime un sommet et ses arcs associ�s OU (Exception EXCSommetInexistant)
+* *********************************************************************************************************************************/
+//G�rer les arcs partant et les arcs sortant
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROSupprimmerSommet(unsigned int uiSomID){
+        if(pGROSommet.find(uiSomID)!=pGROSommet.end()){
+            for(auto pARC : pGROSommet[uiSomID]->SOMLireArcsDep()){
+                for(int i=0;i<(pGROSommet[pARC->ARCLireSomArr()]->SOMLireArcsArr()).size();i++){
+                    if(((pGROSommet[pARC->ARCLireSomArr()]->SOMLireArcsArr())[i])->ARCLireSomDep()==uiSomID){
+                        (pGROSommet[pARC->ARCLireSomArr()]->SOMLireArcsArr()).erase((pGROSommet[pARC->ARCLireSomArr()]->SOMLireArcsArr()).begin()+i);
+                    }
+                }
+            }
+            for(auto pARC : pGROSommet[uiSomID]->SOMLireArcsArr()){
+                            for(int i=0;i<(pGROSommet[pARC->ARCLireSomDep()]->SOMLireArcsDep()).size();i++){
+                                if(((pGROSommet[pARC->ARCLireSomDep()]->SOMLireArcsDep()[i])->ARCLireSomArr()==uiSomID)){
+                                    (pGROSommet[pARC->ARCLireSomDep()]->SOMLireArcsDep()).erase((pGROSommet[pARC->ARCLireSomDep()]->SOMLireArcsDep()).begin()+i);
+                                }
+                            }
+                        }
+            delete pGROSommet.find(uiSomID)->second;
+            pGROSommet.erase(uiSomID);
+            for(size_t s2Boucle=0;s2Boucle<pGROArc.size();){
+                if(pGROArc[s2Boucle]->ARCLireSomArr()==uiSomID || pGROArc[s2Boucle]->ARCLireSomDep()==uiSomID){
+                    delete pGROArc[s2Boucle];
+                    pGROArc.erase(pGROArc.begin()+s2Boucle);
+                }
+                else{
+                    ++s2Boucle;
+                }
+            }
+
+            }
+            else{
+                CException EXCobjet04;
+                EXCobjet04.EXCmodifierCode(EXCSommetInexistant);
+                throw(EXCobjet04);
+            }
+}
+/*********************************************************************************************************************************
+* afficherGraph()
+* ****************
+* Entr�e : Aucune
+* N�cessite : Aucune
+* Sortie : Aucune
+* Entra�ne : Affiche les sommets et arcs du graphe
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROAfficherGraphe() {
+    cout << "Sommets du graphe :" << endl;
+    for (const auto& [idSommet, sommet] : pGROSommet) {
+        cout << "Sommet ID: " << idSommet << endl;
+    }
+    cout<<endl;
+    cout << "Arcs du graphe :" << endl;
+    for (const auto& arc : pGROArc) {
+        cout << "Arc de " << arc->ARCLireSomDep() << " vers " << arc->ARCLireSomArr() << endl;
+    }
+}
+/****************
+* GROInfoGraphe()
+* ****************
+* Entr�e : Aucune
+* Necessite : Aucune
+* Sortie : String (Chaine de caract�re)
+* Entra�ne : Lis les infos du Graphes (Sommets, Arcs...)
+* *****************/
+template<class TArc, class TSommet>
+string CGraphOrient<TArc, TSommet>::GROInfoGraphe() {
+    string Info;
+    Info+= "Sommets du graphe :\n";
+    for (const auto& [idSommet, sommet] : pGROSommet) {
+        Info+= "Sommet ID: "+ to_string(idSommet) + "\n";
+    }
+    Info+="\n";
+    Info+="Arcs du graphe :\n";
+    for (const auto& arc : pGROArc) {
+        Info+= "Arc de "+ to_string(arc->ARCLireSomDep()) + " vers " + to_string(arc->ARCLireSomArr()) + "\n";
+    }
+    Info.pop_back();
+    return Info;
+}
+
+/*********************************************************************************************************************************
+* GROVerifArcExist(uiSomDep, uiSomArr)
+* ****************
+* Entr�e : uiSomDep, uiSomArr (unsigned int)
+* N�cessite : Aucune
+* Sortie : bool
+* Entra�ne : V�rifie si un arc existe entre deux sommets OU (Exception EXCArcInexistant)
+* *********************************************************************************************************************************/
+template <class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROSupprimerArc(unsigned int uiSomDep, unsigned int uiSomArr){
+    if (!GROVerifArcExist(uiSomDep, uiSomArr)) {
+        CException EXCobjet18;
+        EXCobjet18.EXCmodifierCode(EXCArcInexistant);
+        throw(EXCobjet18);
+    }
+    else {
+        for (auto it = pGROArc.begin(); it != pGROArc.end(); ++it) {
+            TArc* pArc = *it;
+
+            if (pArc->ARCLireSomDep() == uiSomDep &&
+                pArc->ARCLireSomArr() == uiSomArr) {
+
+
+                TSommet* pSommetDep = pGROSommet[pArc->ARCLireSomDep()];
+                TSommet* pSommetArr = pGROSommet[pArc->ARCLireSomArr()];
+
+
+
+                pSommetDep->SOMSupprimerArcDep2(pArc);
+
+
+                pSommetArr->SOMSupprimerArcArr2(pArc);
+
+
+                delete pArc;
+                pGROArc.erase(it);
+                return ;
+
+                }
+        }
+    }
+}
+
+/*********************************************************************************************************************************
+* GROAfficherSommetArcs()
+* ****************
+* Entr�e :Rien
+* N�cessite : Rien
+* Sortie : void
+* Entra�ne : l'affichage des adresses memoires des arcs et des sommets : qui sont stockes en  pGROArc , pSOMArcsDep , pSOMArcsArr, pGROSommet
+* *********************************************************************************************************************************/
+template<class TArc, class TSommet>
+void CGraphOrient<TArc, TSommet>::GROAfficherSommetsArcs() const {
+        for ( auto [id, sommet] : pGROSommet) {
+            cout << "Sommet " << sommet->SOMLireSommet() << " :" << endl;
+            cout << "  Arcs sortants (Dep) : ";
+            for ( auto arc : sommet->SOMLireArcsDep()) {
+                if (arc != nullptr)
+                    cout << arc << " "<<" au sommet "<<arc->ARCLireSomArr() << " | ";
+            }
+            cout << endl;
+            cout << "  Arcs entrants (Arr) : ";
+            for (auto arc : sommet->SOMLireArcsArr()) {
+                if (arc != nullptr)
+                    cout << arc << " "<<" du sommet "<<arc->ARCLireSomDep() <<" | ";
+            }
+            cout << endl;
+        }
+        for (auto pArc : pGROArc) {
+            cout << "Arc " << pArc << endl;
+        }
+    }
+
+
+
+
+
